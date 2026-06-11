@@ -1,6 +1,12 @@
 #!/bin/ash
+
+# Source the configuration file
+. /etc/nvr-display/nvr-display.conf
+
 while true; do
-    timeout 1 wget $(cat /etc/nvr-display/forecast/address) -O- | head -c -1 > /tmp/forecast || echo -n Forecast Unavailable. > /tmp/forecast
-    echo -n "$(timeout 1 wget $(cat /etc/nvr-display/temperature/address) -O- | head -n 1 || echo -n "--")° F" > /tmp/temperature
+    if [[ "${FORECAST_ENABLE}" == "1" ]]; then
+        timeout 1 wget ${FORECAST_ADDRESS} -O- | head -c -1 > /tmp/forecast || echo -n Forecast Unavailable. > /tmp/forecast
+    fi
+    echo -n "$(timeout 1 wget ${TEMPERATURE_ADDRESS} -O- | head -n 1 || echo -n "--")° F" > /tmp/temperature
     sleep 60
 done
