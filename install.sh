@@ -24,6 +24,8 @@ fetch_file() {
     if [ -n "$chmod_flags" ]; then
         chmod "$chmod_flags" "$local_path"
     fi
+    
+    lbu add "$local_path"
 }
 
 install_dependencies() {
@@ -149,15 +151,17 @@ do_uninstall() {
     
     for init in $INITS; do
         rc-update del "$init" default 2>/dev/null
+        lbu exclude "/etc/init.d/$init"
         rm -f "/etc/init.d/$init"
     done
     
     for bin in $BINS; do
+        lbu exclude "/bin/$bin"
         rm -f "/bin/$bin"
     done
     
-    echo "Removing configuration directory..."
-    rm -rf /etc/nvr-display
+    #echo "Removing configuration directory..."
+    #rm -rf /etc/nvr-display
     
     echo "Uninstall complete!"
     echo "Note: Dependencies (ffmpeg, bc, etc.) were not removed automatically to prevent breaking other system components."
