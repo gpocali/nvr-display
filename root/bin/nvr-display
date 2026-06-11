@@ -36,7 +36,7 @@ while true; do
     ipAddress=$(ip add show eth0 | grep inet | grep -v inet6 | awk '{print $2}' | cut -d/ -f1 | tr -d '\n')
     filterIp=",drawtext=fontfile=${FONT_PATH}:fontsize=24:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=10:y=44:enable=1:text='${ipAddress}',drawtext=fontfile=${FONT_PATH}:fontsize=24:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=10:y=10:enable=1:text='NVR-Display by Gregory Pocali ©2020${copyright}'"
 
-    filterForecast=",drawtext=fontfile=${FONT_PATH}:fontsize=24:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=10:y=(h-text_h-10):enable=1:textfile='/tmp/forecast':reload=1"
+    filterForecast=",drawtext=fontfile=${FONT_PATH}:fontsize=22:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=10:y=(h-text_h-10):enable=1:textfile='/tmp/forecast':reload=1"
     filterTemperature=",drawtext=fontfile=${FONT_PATH}:fontsize=${DATE_FONTSIZE}:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=(w-text_w-10):y=(${DATE_FONTSIZE}+10):enable=1:textfile='/tmp/temperature':reload=1"
 
     # Prepare time output if enabled
