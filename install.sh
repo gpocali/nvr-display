@@ -53,7 +53,7 @@ stop_services() {
 start_services() {
     for svc in $INITS; do
         echo "Starting $svc..."
-        rc-service "$svc" start
+        rc-service "$svc" restart
     done
 }
 
