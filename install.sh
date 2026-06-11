@@ -1,8 +1,7 @@
 #!/bin/sh
 # NVR-Display Installer / Updater / Uninstaller
 
-# Base URL for the raw GitHub files. 
-# Note: If your default branch is 'master' instead of 'main', update the URL below.
+# Base URL for the raw GitHub files.
 REPO_URL="https://raw.githubusercontent.com/gpocali/nvr-display/main"
 
 BINS="nvr-display nvr-downloader nvr-forecast"
@@ -24,8 +23,6 @@ fetch_file() {
     if [ -n "$chmod_flags" ]; then
         chmod "$chmod_flags" "$local_path"
     fi
-    
-    lbu add "$local_path"
 }
 
 install_dependencies() {
@@ -53,8 +50,34 @@ stop_services() {
 start_services() {
     for svc in $INITS; do
         echo "Starting $svc..."
-        rc-service "$svc" restart
+        rc-service "$svc" start
     done
+}
+
+update_motd() {
+    echo "Updating /etc/motd with NVR-Display information..."
+    cat << 'EOF' > /etc/motd
+
+=====================================================================
+                           NVR-DISPLAY
+=====================================================================
+
+Configuration File:
+  /etc/nvr-display/nvr-display.conf
+
+Service Control Commands:
+  rc-service nvr-display [start|stop|restart|status]
+  rc-service nvr-downloader [start|stop|restart|status]
+  rc-service nvr-forecast [start|stop|restart|status]
+
+View Live Logs / Output (Detach with Ctrl+A, then D):
+  screen -r nvr-display
+  screen -r nvr-downloader
+  screen -r nvr-forecast
+
+=====================================================================
+
+EOF
 }
 
 create_default_config() {
@@ -113,6 +136,7 @@ do_install() {
     echo "Starting NVR-Display Installation..."
     install_dependencies
     create_default_config
+    update_motd
     
     for bin in $BINS; do
         fetch_file "root/bin/$bin" "/bin/$bin" "+x"
@@ -131,6 +155,7 @@ do_update() {
     echo "Starting NVR-Display Update..."
     stop_services
     install_dependencies
+    update_motd
     
     echo "Updating binaries and services..."
     for bin in $BINS; do
@@ -151,17 +176,18 @@ do_uninstall() {
     
     for init in $INITS; do
         rc-update del "$init" default 2>/dev/null
-        lbu exclude "/etc/init.d/$init"
         rm -f "/etc/init.d/$init"
     done
     
     for bin in $BINS; do
-        lbu exclude "/bin/$bin"
         rm -f "/bin/$bin"
     done
     
-    #echo "Removing configuration directory..."
-    #rm -rf /etc/nvr-display
+    echo "Removing configuration directory..."
+    rm -rf /etc/nvr-display
+    
+    echo "Resetting /etc/motd..."
+    echo "Welcome to Alpine!" > /etc/motd
     
     echo "Uninstall complete!"
     echo "Note: Dependencies (ffmpeg, bc, etc.) were not removed automatically to prevent breaking other system components."
