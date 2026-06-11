@@ -66,7 +66,7 @@ create_default_config() {
 
 # General Settings
 TIMEZONE="America/New_York"
-BACKGROUND="https://gpocali:Greg-is-2-cool!@192.168.10.90/timelapse.jpg"
+BACKGROUND="https://192.168.10.90/timelapse.jpg"
 
 # Downloader Settings
 DOWNLOADER_INTERVAL="0.25"
