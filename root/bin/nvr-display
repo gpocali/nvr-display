@@ -1,0 +1,71 @@
+#!/bin/ash
+# SLATE FFMPEG
+
+configLocation=/etc/nvr-display
+
+cp /usr/share/zoneinfo/$(cat ${configLocation}/timezone) /etc/localtime
+
+fps=6
+downloadFps=2
+
+if [ ! -e /tmp/forecast ]; then
+    echo -n Updating Forecast...
+fi
+
+while true; do
+    echo $(date) - Starting Loop
+    # If content is available use that otherwise generate bars
+    if [ -e ${configLocation}/background ]; then
+        content="-f image2 -thread_queue_size 1 -framerate ${downloadFps} -loop 1 -r ${downloadFps} -i /tmp/timelapse/timelapse.jpg"
+    else
+        content="-r ${fps} -f lavfi -i smptebars=size=1920x1080:rate=${fps}"
+    fi
+
+    # Initialize Filter
+    filter="[0:0]fps=${fps}[background];[1:0]fps=${downloadFps},setpts=PTS-STARTPTS,scale=w=1920:h=1080:force_original_aspect_ratio=decrease,fps=${fps}[input];[background][input]overlay=x=(main_w-overlay_w)/2:y=(main_h-overlay_h)/2"
+
+    if [ $(date +%Y) -gt 2020 ]; then
+        copyright="-$(date +%Y)"
+    else
+        copyright=""
+    fi
+
+    # Display IP Address for first 30 sec after startup and credit
+    ipAddress=$(ip add show eth0 | grep inet | grep -v inet6 | awk '{print $2}' | cut -d/ -f1 | tr -d '\n')
+    filterIp=",drawtext=fontfile=$(cat ${configLocation}/text/font):fontsize=24:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=10:y=44:enable=1:text='${ipAddress}',drawtext=fontfile=$(cat ${configLocation}/text/font):fontsize=24:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=10:y=10:enable=1:text='NVR-Display by Gregory Pocali ©2020${copyright}'"
+
+    filterForecast=",drawtext=fontfile=$(cat ${configLocation}/text/font):fontsize=24:box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=10:y=(h-text_h-10):enable=1:textfile='/tmp/forecast':reload=1"
+    filterTemperature=",drawtext=fontfile=$(cat ${configLocation}/text/font):fontsize=$(cat ${configLocation}/text/date/fontsize):box=1:boxcolor=black@1:boxborderw=10:fontcolor=gray:x=(w-text_w-10):y=($(cat ${configLocation}/text/date/fontsize)+10):enable=1:textfile='/tmp/temperature':reload=1"
+
+    # Prepare time output if enabled
+    if [[ "$(cat ${configLocation}/text/time/enable)" == "1" ]]; then
+        # Format time for 12h or 24h
+        if [[ "$(cat ${configLocation}/text/time/format)" == "12h" ]]; then
+            filterTime=",drawtext=fontfile=$(cat ${configLocation}/text/font):fontsize=$(cat ${configLocation}/text/time/fontsize):box=$(cat ${configLocation}/text/time/box/enable):boxcolor=$(cat ${configLocation}/text/time/box/color)@$(cat ${configLocation}/text/time/box/transparency):boxborderw=$(cat ${configLocation}/text/time/box/border):fontcolor=$(cat ${configLocation}/text/time/fontcolor):x=$(cat ${configLocation}/text/time/x):y=$(cat ${configLocation}/text/time/y):text='%{localtime\\:%I\\\\\:%M\\\\\:%S\\\\\ %p %Z}'"
+        else
+            filterTime=",drawtext=fontfile=$(cat ${configLocation}/text/font):fontsize=$(cat ${configLocation}/text/time/fontsize):box=$(cat ${configLocation}/text/time/box/enable):boxcolor=$(cat ${configLocation}/text/time/box/color)@$(cat ${configLocation}/text/time/box/transparency):boxborderw=$(cat ${configLocation}/text/time/box/border):fontcolor=$(cat ${configLocation}/text/time/fontcolor):x=$(cat ${configLocation}/text/time/x):y=$(cat ${configLocation}/text/time/y):text='%{localtime\\:%H\\\\\:%M\\\\\:%S %Z}'"
+        fi
+    else
+        filterTime=""
+    fi
+
+    # Prepare date output if enabled
+    if [[ "$(cat ${configLocation}/text/date/enable)" == "1" ]]; then
+        filterDate=",drawtext=fontfile=$(cat ${configLocation}/text/font):fontsize=$(cat ${configLocation}/text/date/fontsize):box=$(cat ${configLocation}/text/date/box/enable):boxcolor=$(cat ${configLocation}/text/date/box/color)@$(cat ${configLocation}/text/date/box/transparency):boxborderw=$(cat ${configLocation}/text/date/box/border):fontcolor=$(cat ${configLocation}/text/date/fontcolor):x=$(cat ${configLocation}/text/date/x):y=$(cat ${configLocation}/text/date/y):text='%{localtime\\:%A %b %d, %Y}'"
+    else
+        filterDate=""
+    fi
+
+    # Disable Blinking Cursor
+    echo 0 > /sys/class/graphics/fbcon/cursor_blink
+
+    #echo ${filter}${filterTime}${filterDate}${filterIp}
+
+    # Run FFMPEG
+    duration=$(($(date -d "$(date -d 'next hour' "+%Y-%m-%d %H:00:00 %Z")" +%s) - $(date +%s)))
+    ffmpeg -loglevel error -stats -threads 3 -fflags +genpts+nobuffer -thread_queue_size 1 -use_wallclock_as_timestamps 1 -r ${fps} -f lavfi -i color=size=1920x1080:rate=1:c=black@1 ${content} -filter_complex "${filter}${filterTime}${filterDate}${filterIp}${filterForecast}${filterTemperature},fps=(${fps})[out]" -t ${duration} -map "[out]" -vsync 1 -r ${fps} -pix_fmt bgra -f fbdev /dev/fb0
+    # Re-Enable Blinking Cursor on exit
+    echo 1 > /sys/class/graphics/fbcon/cursor_blink
+    echo $(date) - Finished Loop
+done
+exit 0

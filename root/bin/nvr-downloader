@@ -1,0 +1,41 @@
+#!/bin/ash
+echo $(date) - Starting Timelapse Downloader
+
+error=0
+INTERVAL=$(cat /etc/nvr-display/downloader/interval)
+INPUT_FLAGS=$(cat /etc/nvr-display/downloader/inputFlags)
+INPUT_STREAM=$(cat /etc/nvr-display/downloader/inputStream)
+
+if [[ "$INTERVAL" == "" ]]; then
+    echo Interval must be defined in /etc/nvr-display/downloader/interval
+    error=1
+fi
+
+if [[ "$INPUT_STREAM" == "" ]]; then
+    echo Input Stream must be defined in /etc/nvr-display/downloader/inputStream
+    error=1
+else
+    echo Using inputStream: $INPUT_STREAM
+fi
+
+if [ $error -eq 1 ]; then
+    exit 1
+fi
+
+path=/tmp/timelapse
+if [ ! -e $path ]; then
+    echo $(date) - Making Directory $path
+    mkdir -p $path
+fi
+
+counter=0
+while true; do
+    wget --timeout=1 -q $INPUT_FLAGS "$INPUT_STREAM" -O $path/timelapse$counter.jpg && ln -s -f $path/timelapse$counter.jpg $path/timelapse.jpg && echo $(date) - timelapse$counter.jpg Downloaded || echo $(date) - Download Failed
+    if [ $counter -lt 10 ]; then
+        counter=$(($counter+1))
+    else
+        counter=0
+    fi
+    sleep $INTERVAL;
+done
+

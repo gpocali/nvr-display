@@ -1,0 +1,8 @@
+bc
+ffmpeg
+font-dejavu
+fontconfig
+freetype
+inotify-tools
+screen
+util-linux
